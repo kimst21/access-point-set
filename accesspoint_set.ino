@@ -1,36 +1,36 @@
-// Load Wi-Fi library
+//Wi-Fi 라이브러리 로드
 #include <WiFi.h>
 
-// Replace with your network credentials
+// 네트워크 자격 증명으로 대체
 const char* ssid     = "ESP32-Access-Point";
 const char* password = "123456789";
 
-// Set web server port number to 80
+// 웹 서버 포트 번호를 80으로 설정합니다
 WiFiServer server(80);
 
-// Variable to store the HTTP request
+// HTTP 요청을 저장할 변수
 String header;
 
-// Auxiliar variables to store the current output state
+// 현재 출력 상태를 저장하는 보조 변수
 String output45State = "off";
 String output46State = "off";
 
-// Assign output variables to GPIO pins
+// GPIO 핀에 출력 변수 할당
 const int output45 = 45;
 const int output46 = 46;
 
 void setup() {
   Serial.begin(115200);
-  // Initialize the output variables as outputs
+  // 출력 변수를 출력으로 초기화
   pinMode(output45, OUTPUT);
   pinMode(output46, OUTPUT);
   // Set outputs to LOW
   digitalWrite(output45, LOW);
   digitalWrite(output46, LOW);
 
-  // Connect to Wi-Fi network with SSID and password
+  // SSID 및 암호를 사용하여 Wi-Fi 네트워크에 연결
   Serial.print("Setting AP (Access Point)…");
-  // Remove the password parameter, if you want the AP (Access Point) to be open
+  // AP(Access Point)를 열려는 경우 암호 매개 변수 제거
   WiFi.softAP(ssid, password);
 
   IPAddress IP = WiFi.softAPIP();
@@ -43,26 +43,26 @@ void setup() {
 void loop(){
   WiFiClient client = server.available();   // Listen for incoming clients
 
-  if (client) {                             // If a new client connects,
-    Serial.println("New Client.");          // print a message out in the serial port
-    String currentLine = "";                // make a String to hold incoming data from the client
-    while (client.connected()) {            // loop while the client's connected
-      if (client.available()) {             // if there's bytes to read from the client,
-        char c = client.read();             // read a byte, then
-        Serial.write(c);                    // print it out the serial monitor
+  if (client) {                             // 새 클라이언트가 연결되면,
+    Serial.println("New Client.");          // 직렬 포트에서 메시지를 인쇄
+    String currentLine = "";                // 클라이언트에서 들어오는 데이터를 보관할 문자열을 만듭니다
+    while (client.connected()) {            // 클라이언트가 연결된 동안 루프
+      if (client.available()) {             // 클라이언트에서 읽을 바이트가 있다면,
+        char c = client.read();             // 그러면 바이트를 읽습니다
+        Serial.write(c);                    // 직렬 모니터를 출력합니다
         header += c;
-        if (c == '\n') {                    // if the byte is a newline character
-          // if the current line is blank, you got two newline characters in a row.
-          // that's the end of the client HTTP request, so send a response:
+        if (c == '\n') {                    // 바이트가 줄 바꿈 문자인 경우
+          // 현재 줄이 비어 있으면 두 개의 새 줄 문자가 연속으로 나타납니다.
+          //클라이언트 HTTP 요청이 끝났으니 응답을 보내십시오:
           if (currentLine.length() == 0) {
-            // HTTP headers always start with a response code (e.g. HTTP/1.1 200 OK)
-            // and a content-type so the client knows what's coming, then a blank line:
+            // HTTP 헤더는 항상 응답 코드(예: HTTP/1.1200 OK)로 시작합니다
+            // 고객이 무엇이 올지 알 수 있도록 내용 유형을 지정한 다음 빈 줄을 표시합니다:
             client.println("HTTP/1.1 200 OK");
             client.println("Content-type:text/html");
             client.println("Connection: close");
             client.println();
             
-            // turns the GPIOs on and off
+            //GPIO 켜기/끄기
             if (header.indexOf("GET /45/on") >= 0) {
               Serial.println("GPIO 45 on");
               output45State = "on";
@@ -81,30 +81,30 @@ void loop(){
               digitalWrite(output46, LOW);
             }
             
-            // Display the HTML web page
+            // HTML 웹 페이지 표시
             client.println("<!DOCTYPE html><html>");
             client.println("<head><meta name=\"viewport\" content=\"width=device-width, initial-scale=1\">");
             client.println("<link rel=\"icon\" href=\"data:,\">");
-            // CSS to style the on/off buttons 
-            // Feel free to change the background-color and font-size attributes to fit your preferences
+            // CSS를 사용하여 켜기/끄기 버튼 스타일 지정
+            // 기본 설정에 맞게 배경색 및 글꼴 크기 속성을 자유롭게 변경할 수 있습니다
             client.println("<style>html { font-family: Helvetica; display: inline-block; margin: 0px auto; text-align: center;}");
             client.println(".button { background-color: #4CAF50; border: none; color: white; padding: 16px 40px;");
             client.println("text-decoration: none; font-size: 30px; margin: 2px; cursor: pointer;}");
             client.println(".button2 {background-color: #555555;}</style></head>");
             
-            // Web Page Heading
+            // 웹 페이지 제목
             client.println("<body><h1>ESP32 Web Server</h1>");
             
-            // Display current state, and ON/OFF buttons for GPIO 45  
+            // 현재 상태 표시 및 GPIO의 ON/OFF 버튼 45
             client.println("<p>GPIO 45 - State " + output45State + "</p>");
-            // If the output45State is off, it displays the ON button       
+            //출력 45 상태가 꺼져 있으면 ON 버튼이 표시됩니다
             if (output45State=="off") {
               client.println("<p><a href=\"/45/on\"><button class=\"button\">ON</button></a></p>");
             } else {
               client.println("<p><a href=\"/45/off\"><button class=\"button button2\">OFF</button></a></p>");
             } 
                
-            // Display current state, and ON/OFF buttons for GPIO 46  
+            // 현재 상태 표시, GPIO의 ON/OFF 버튼 46
             client.println("<p>GPIO 46 - State " + output46State + "</p>");
             // If the output46State is off, it displays the ON button       
             if (output46State=="off") {
@@ -121,14 +121,14 @@ void loop(){
           } else { // if you got a newline, then clear currentLine
             currentLine = "";
           }
-        } else if (c != '\r') {  // if you got anything else but a carriage return character,
-          currentLine += c;      // add it to the end of the currentLine
+        } else if (c != '\r') {  // 캐리지 리턴 캐릭터 말고 다른 게 있다면,
+          currentLine += c;      // 현재 줄 끝에 추가합니다
         }
       }
     }
-    // Clear the header variable
+    //헤더 변수 지우기
     header = "";
-    // Close the connection
+    // 연결을 닫습니다
     client.stop();
     Serial.println("Client disconnected.");
     Serial.println("");
