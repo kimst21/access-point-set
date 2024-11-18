@@ -16,17 +16,17 @@ String output45State = "off";
 String output46State = "off";
 
 // GPIO 핀에 출력 변수 할당
-const int output45 = 45;
-const int output46 = 46;
+const int output41 = 41;
+const int output42 = 42;
 
 void setup() {
   Serial.begin(115200);
   // 출력 변수를 출력으로 초기화
-  pinMode(output45, OUTPUT);
-  pinMode(output46, OUTPUT);
+  pinMode(output41, OUTPUT);
+  pinMode(output42, OUTPUT);
   // Set outputs to LOW
-  digitalWrite(output45, LOW);
-  digitalWrite(output46, LOW);
+  digitalWrite(output41, LOW);
+  digitalWrite(output42, LOW);
 
   // SSID 및 암호를 사용하여 Wi-Fi 네트워크에 연결
   Serial.print("Setting AP (Access Point)…");
@@ -63,22 +63,22 @@ void loop(){
             client.println();
             
             //GPIO 켜기/끄기
-            if (header.indexOf("GET /45/on") >= 0) {
-              Serial.println("GPIO 45 on");
-              output45State = "on";
-              digitalWrite(output45, HIGH);
-            } else if (header.indexOf("GET /45/off") >= 0) {
-              Serial.println("GPIO 45 off");
-              output45State = "off";
-              digitalWrite(output45, LOW);
-            } else if (header.indexOf("GET /46/on") >= 0) {
-              Serial.println("GPIO 46 on");
-              output46State = "on";
-              digitalWrite(output46, HIGH);
-            } else if (header.indexOf("GET /46/off") >= 0) {
-              Serial.println("GPIO 46 off");
-              output46State = "off";
-              digitalWrite(output46, LOW);
+            if (header.indexOf("GET /41/on") >= 0) {
+              Serial.println("GPIO 41 on");
+              output41State = "on";
+              digitalWrite(output41, HIGH);
+            } else if (header.indexOf("GET /41/off") >= 0) {
+              Serial.println("GPIO 41 off");
+              output41State = "off";
+              digitalWrite(output41, LOW);
+            } else if (header.indexOf("GET /42/on") >= 0) {
+              Serial.println("GPIO 42 on");
+              output42State = "on";
+              digitalWrite(output42, HIGH);
+            } else if (header.indexOf("GET /42/off") >= 0) {
+              Serial.println("GPIO 42 off");
+              output42State = "off";
+              digitalWrite(output42, LOW);
             }
             
             // HTML 웹 페이지 표시
