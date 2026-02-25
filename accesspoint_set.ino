@@ -16,17 +16,17 @@ String output45State = "off";
 String output46State = "off";
 
 // GPIO 핀에 출력 변수 할당
-const int output41 = 41;
-const int output42 = 42;
+const int output35 = 35;
+const int output36 = 36;
 
 void setup() {
   Serial.begin(115200);
   // 출력 변수를 출력으로 초기화
-  pinMode(output41, OUTPUT);
-  pinMode(output42, OUTPUT);
+  pinMode(output35, OUTPUT);
+  pinMode(output36, OUTPUT);
   // Set outputs to LOW
-  digitalWrite(output41, LOW);
-  digitalWrite(output42, LOW);
+  digitalWrite(output35, LOW);
+  digitalWrite(output36, LOW);
 
   // SSID 및 암호를 사용하여 Wi-Fi 네트워크에 연결
   Serial.print("Setting AP (Access Point)…");
@@ -63,22 +63,22 @@ void loop(){
             client.println();
             
             //GPIO 켜기/끄기
-            if (header.indexOf("GET /41/on") >= 0) {
-              Serial.println("GPIO 41 on");
-              output41State = "on";
-              digitalWrite(output41, HIGH);
-            } else if (header.indexOf("GET /41/off") >= 0) {
-              Serial.println("GPIO 41 off");
-              output41State = "off";
-              digitalWrite(output41, LOW);
-            } else if (header.indexOf("GET /42/on") >= 0) {
-              Serial.println("GPIO 42 on");
-              output42State = "on";
-              digitalWrite(output42, HIGH);
-            } else if (header.indexOf("GET /42/off") >= 0) {
-              Serial.println("GPIO 42 off");
-              output42State = "off";
-              digitalWrite(output42, LOW);
+            if (header.indexOf("GET /35/on") >= 0) {
+              Serial.println("GPIO 35 on");
+              output35State = "on";
+              digitalWrite(output35, HIGH);
+            } else if (header.indexOf("GET /35/off") >= 0) {
+              Serial.println("GPIO 35 off");
+              output35State = "off";
+              digitalWrite(output35, LOW);
+            } else if (header.indexOf("GET /36/on") >= 0) {
+              Serial.println("GPIO 36 on");
+              output36State = "on";
+              digitalWrite(output36, HIGH);
+            } else if (header.indexOf("GET /36/off") >= 0) {
+              Serial.println("GPIO 36 off");
+              output36State = "off";
+              digitalWrite(output36, LOW);
             }
             
             // HTML 웹 페이지 표시
@@ -96,21 +96,21 @@ void loop(){
             client.println("<body><h1>ESP32 Web Server</h1>");
             
             // 현재 상태 표시 및 GPIO의 ON/OFF 버튼 45
-            client.println("<p>GPIO 45 - State " + output45State + "</p>");
+            client.println("<p>GPIO 35 - State " + output45State + "</p>");
             //출력 45 상태가 꺼져 있으면 ON 버튼이 표시됩니다
             if (output45State=="off") {
-              client.println("<p><a href=\"/45/on\"><button class=\"button\">ON</button></a></p>");
+              client.println("<p><a href=\"/35/on\"><button class=\"button\">ON</button></a></p>");
             } else {
-              client.println("<p><a href=\"/45/off\"><button class=\"button button2\">OFF</button></a></p>");
+              client.println("<p><a href=\"/35/off\"><button class=\"button button2\">OFF</button></a></p>");
             } 
                
-            // 현재 상태 표시, GPIO의 ON/OFF 버튼 46
-            client.println("<p>GPIO 46 - State " + output46State + "</p>");
-            // If the output46State is off, it displays the ON button       
-            if (output46State=="off") {
-              client.println("<p><a href=\"/46/on\"><button class=\"button\">ON</button></a></p>");
+            // 현재 상태 표시, GPIO의 ON/OFF 버튼 36
+            client.println("<p>GPIO 36 - State " + output36State + "</p>");
+            // If the output36State is off, it displays the ON button       
+            if (output36State=="off") {
+              client.println("<p><a href=\"/36/on\"><button class=\"button\">ON</button></a></p>");
             } else {
-              client.println("<p><a href=\"/46/off\"><button class=\"button button2\">OFF</button></a></p>");
+              client.println("<p><a href=\"/36/off\"><button class=\"button button2\">OFF</button></a></p>");
             }
             client.println("</body></html>");
             
