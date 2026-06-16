@@ -1,136 +1,302 @@
-//Wi-Fi 라이브러리 로드
-#include <WiFi.h>
+// ============================================================================
+// ESP32-S3 AP 모드 GPIO41 / GPIO42 웹 제어 서버
+//
+// 기능
+// 1. ESP32-S3가 WiFi AP(Access Point) 생성
+// 2. 스마트폰 또는 PC가 ESP32에 직접 접속
+// 3. 웹 브라우저에서 ON/OFF 버튼 표시
+// 4. GPIO41, GPIO42 출력 제어
+//
+// 접속 주소
+// http://192.168.4.1
+// ============================================================================
 
-// 네트워크 자격 증명으로 대체
+#include <WiFi.h>   // WiFi 기능 사용
+
+// ============================================================================
+// AP(Access Point) 정보
+// ============================================================================
 const char* ssid     = "ESP32-Access-Point";
 const char* password = "123456789";
 
-// 웹 서버 포트 번호를 80으로 설정합니다
+// ============================================================================
+// 웹서버 생성
+// ============================================================================
 WiFiServer server(80);
 
-// HTTP 요청을 저장할 변수
+// HTTP 요청 저장 문자열
 String header;
 
-// 현재 출력 상태를 저장하는 보조 변수
-String output45State = "off";
-String output46State = "off";
+// ============================================================================
+// GPIO 상태 저장 변수
+// ============================================================================
+String output41State = "off";
+String output42State = "off";
 
-// GPIO 핀에 출력 변수 할당
+// ============================================================================
+// GPIO 번호
+// ============================================================================
 const int output41 = 41;
 const int output42 = 42;
 
+// ============================================================================
+// SETUP
+// ============================================================================
 void setup() {
+
+  // --------------------------------------------------------
+  // 시리얼 모니터 시작
+  // --------------------------------------------------------
   Serial.begin(115200);
-  // 출력 변수를 출력으로 초기화
+
+  // --------------------------------------------------------
+  // GPIO 출력 모드 설정
+  // --------------------------------------------------------
   pinMode(output41, OUTPUT);
   pinMode(output42, OUTPUT);
-  // Set outputs to LOW
+
+  // --------------------------------------------------------
+  // 초기 상태 OFF
+  // --------------------------------------------------------
   digitalWrite(output41, LOW);
   digitalWrite(output42, LOW);
 
-  // SSID 및 암호를 사용하여 Wi-Fi 네트워크에 연결
-  Serial.print("Setting AP (Access Point)…");
-  // AP(Access Point)를 열려는 경우 암호 매개 변수 제거
+  // --------------------------------------------------------
+  // AP 생성
+  // --------------------------------------------------------
+  Serial.println("Creating Access Point...");
+
   WiFi.softAP(ssid, password);
 
+  // --------------------------------------------------------
+  // AP IP 출력
+  // 기본값 : 192.168.4.1
+  // --------------------------------------------------------
   IPAddress IP = WiFi.softAPIP();
-  Serial.print("AP IP address: ");
+
+  Serial.print("AP IP Address : ");
   Serial.println(IP);
-  
+
+  // --------------------------------------------------------
+  // 웹 서버 시작
+  // --------------------------------------------------------
   server.begin();
+
+  Serial.println("HTTP Server Started");
 }
 
-void loop(){
-  WiFiClient client = server.available();   // Listen for incoming clients
+// ============================================================================
+// LOOP
+// ============================================================================
+void loop() {
 
-  if (client) {                             // 새 클라이언트가 연결되면,
-    Serial.println("New Client.");          // 직렬 포트에서 메시지를 인쇄
-    String currentLine = "";                // 클라이언트에서 들어오는 데이터를 보관할 문자열을 만듭니다
-    while (client.connected()) {            // 클라이언트가 연결된 동안 루프
-      if (client.available()) {             // 클라이언트에서 읽을 바이트가 있다면,
-        char c = client.read();             // 그러면 바이트를 읽습니다
-        Serial.write(c);                    // 직렬 모니터를 출력합니다
-        header += c;
-        if (c == '\n') {                    // 바이트가 줄 바꿈 문자인 경우
-          // 현재 줄이 비어 있으면 두 개의 새 줄 문자가 연속으로 나타납니다.
-          //클라이언트 HTTP 요청이 끝났으니 응답을 보내십시오:
-          if (currentLine.length() == 0) {
-            // HTTP 헤더는 항상 응답 코드(예: HTTP/1.1200 OK)로 시작합니다
-            // 고객이 무엇이 올지 알 수 있도록 내용 유형을 지정한 다음 빈 줄을 표시합니다:
-            client.println("HTTP/1.1 200 OK");
-            client.println("Content-type:text/html");
-            client.println("Connection: close");
-            client.println();
-            
-            //GPIO 켜기/끄기
-            if (header.indexOf("GET /41/on") >= 0) {
-              Serial.println("GPIO 41 on");
-              output41State = "on";
-              digitalWrite(output41, HIGH);
-            } else if (header.indexOf("GET /41/off") >= 0) {
-              Serial.println("GPIO 41 off");
-              output41State = "off";
-              digitalWrite(output41, LOW);
-            } else if (header.indexOf("GET /42/on") >= 0) {
-              Serial.println("GPIO 42 on");
-              output42State = "on";
-              digitalWrite(output42, HIGH);
-            } else if (header.indexOf("GET /42/off") >= 0) {
-              Serial.println("GPIO 42 off");
-              output42State = "off";
-              digitalWrite(output42, LOW);
-            }
-            
-            // HTML 웹 페이지 표시
-            client.println("<!DOCTYPE html><html>");
-            client.println("<head><meta name=\"viewport\" content=\"width=device-width, initial-scale=1\">");
-            client.println("<link rel=\"icon\" href=\"data:,\">");
-            // CSS를 사용하여 켜기/끄기 버튼 스타일 지정
-            // 기본 설정에 맞게 배경색 및 글꼴 크기 속성을 자유롭게 변경할 수 있습니다
-            client.println("<style>html { font-family: Helvetica; display: inline-block; margin: 0px auto; text-align: center;}");
-            client.println(".button { background-color: #4CAF50; border: none; color: white; padding: 16px 40px;");
-            client.println("text-decoration: none; font-size: 30px; margin: 2px; cursor: pointer;}");
-            client.println(".button2 {background-color: #555555;}</style></head>");
-            
-            // 웹 페이지 제목
-            client.println("<body><h1>ESP32 Web Server</h1>");
-            
-            // 현재 상태 표시 및 GPIO의 ON/OFF 버튼 45
-            client.println("<p>GPIO 41 - State " + output45State + "</p>");
-            //출력 45 상태가 꺼져 있으면 ON 버튼이 표시됩니다
-            if (output45State=="off") {
-              client.println("<p><a href=\"/41/on\"><button class=\"button\">ON</button></a></p>");
-            } else {
-              client.println("<p><a href=\"/41/off\"><button class=\"button button2\">OFF</button></a></p>");
-            } 
-               
-            // 현재 상태 표시, GPIO의 ON/OFF 버튼 42
-            client.println("<p>GPIO 42 - State " + output42State + "</p>");
-            // If the output42State is off, it displays the ON button       
-            if (output42State=="off") {
-              client.println("<p><a href=\"/42/on\"><button class=\"button\">ON</button></a></p>");
-            } else {
-              client.println("<p><a href=\"/42/off\"><button class=\"button button2\">OFF</button></a></p>");
-            }
-            client.println("</body></html>");
-            
-            // The HTTP response ends with another blank line
-            client.println();
-            // Break out of the while loop
-            break;
-          } else { // if you got a newline, then clear currentLine
-            currentLine = "";
+  // --------------------------------------------------------
+  // 새로운 클라이언트 확인
+  // --------------------------------------------------------
+  WiFiClient client = server.available();
+
+  // 접속자가 없으면 종료
+  if (!client) return;
+
+  Serial.println("New Client Connected");
+
+  String currentLine = "";
+
+  // --------------------------------------------------------
+  // 클라이언트 연결 유지
+  // --------------------------------------------------------
+  while (client.connected()) {
+
+    if (client.available()) {
+
+      char c = client.read();
+
+      Serial.write(c);
+
+      header += c;
+
+      // ----------------------------------------------------
+      // 한 줄 끝
+      // ----------------------------------------------------
+      if (c == '\n') {
+
+        // --------------------------------------------------
+        // 빈 줄 = HTTP Header 끝
+        // --------------------------------------------------
+        if (currentLine.length() == 0) {
+
+          // ==================================================
+          // GPIO41 ON
+          // ==================================================
+          if (header.indexOf("GET /41/on") >= 0) {
+
+            Serial.println("GPIO41 ON");
+
+            output41State = "on";
+
+            digitalWrite(output41, HIGH);
           }
-        } else if (c != '\r') {  // 캐리지 리턴 캐릭터 말고 다른 게 있다면,
-          currentLine += c;      // 현재 줄 끝에 추가합니다
+
+          // ==================================================
+          // GPIO41 OFF
+          // ==================================================
+          else if (header.indexOf("GET /41/off") >= 0) {
+
+            Serial.println("GPIO41 OFF");
+
+            output41State = "off";
+
+            digitalWrite(output41, LOW);
+          }
+
+          // ==================================================
+          // GPIO42 ON
+          // ==================================================
+          else if (header.indexOf("GET /42/on") >= 0) {
+
+            Serial.println("GPIO42 ON");
+
+            output42State = "on";
+
+            digitalWrite(output42, HIGH);
+          }
+
+          // ==================================================
+          // GPIO42 OFF
+          // ==================================================
+          else if (header.indexOf("GET /42/off") >= 0) {
+
+            Serial.println("GPIO42 OFF");
+
+            output42State = "off";
+
+            digitalWrite(output42, LOW);
+          }
+
+          // ==================================================
+          // HTTP 응답 시작
+          // ==================================================
+          client.println("HTTP/1.1 200 OK");
+          client.println("Content-type:text/html");
+          client.println("Connection: close");
+          client.println();
+
+          // ==================================================
+          // HTML 페이지 생성
+          // ==================================================
+          client.println("<!DOCTYPE html>");
+          client.println("<html>");
+
+          client.println("<head>");
+
+          client.println("<meta name=\"viewport\" content=\"width=device-width, initial-scale=1\">");
+
+          client.println("<style>");
+
+          client.println("html {");
+          client.println("font-family: Helvetica;");
+          client.println("text-align:center;");
+          client.println("}");
+
+          client.println(".button {");
+          client.println("background:#4CAF50;");
+          client.println("color:white;");
+          client.println("padding:16px 40px;");
+          client.println("font-size:30px;");
+          client.println("border:none;");
+          client.println("}");
+
+          client.println(".button2 {");
+          client.println("background:#555555;");
+          client.println("}");
+
+          client.println("</style>");
+
+          client.println("</head>");
+
+          // ==================================================
+          // BODY 시작
+          // ==================================================
+          client.println("<body>");
+
+          client.println("<h1>ESP32-S3 Web Server</h1>");
+
+          // ==================================================
+          // GPIO41 상태 표시
+          // ==================================================
+          client.println("<h2>GPIO41</h2>");
+
+          client.println("<p>State : " + output41State + "</p>");
+
+          if (output41State == "off") {
+
+            client.println("<a href=\"/41/on\">");
+            client.println("<button class=\"button\">ON</button>");
+            client.println("</a>");
+
+          } else {
+
+            client.println("<a href=\"/41/off\">");
+            client.println("<button class=\"button button2\">OFF</button>");
+            client.println("</a>");
+          }
+
+          // ==================================================
+          // 구분선
+          // ==================================================
+          client.println("<hr>");
+
+          // ==================================================
+          // GPIO42 상태 표시
+          // ==================================================
+          client.println("<h2>GPIO42</h2>");
+
+          client.println("<p>State : " + output42State + "</p>");
+
+          if (output42State == "off") {
+
+            client.println("<a href=\"/42/on\">");
+            client.println("<button class=\"button\">ON</button>");
+            client.println("</a>");
+
+          } else {
+
+            client.println("<a href=\"/42/off\">");
+            client.println("<button class=\"button button2\">OFF</button>");
+            client.println("</a>");
+          }
+
+          client.println("</body>");
+          client.println("</html>");
+
+          // HTTP 종료
+          client.println();
+
+          break;
+        }
+        else {
+
+          // 다음 줄 준비
+          currentLine = "";
         }
       }
+      else if (c != '\r') {
+
+        // 현재 줄 저장
+        currentLine += c;
+      }
     }
-    //헤더 변수 지우기
-    header = "";
-    // 연결을 닫습니다
-    client.stop();
-    Serial.println("Client disconnected.");
-    Serial.println("");
   }
+
+  // --------------------------------------------------------
+  // 요청 데이터 초기화
+  // --------------------------------------------------------
+  header = "";
+
+  // --------------------------------------------------------
+  // 클라이언트 연결 종료
+  // --------------------------------------------------------
+  client.stop();
+
+  Serial.println("Client Disconnected");
 }
