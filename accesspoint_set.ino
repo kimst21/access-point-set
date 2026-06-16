@@ -10,293 +10,118 @@
 // 접속 주소
 // http://192.168.4.1
 // ============================================================================
+#include <WiFi.h>                 // WiFi 기능 사용
 
-#include <WiFi.h>   // WiFi 기능 사용
+const char* ssid = "ESP32-Access-Point";   // AP 이름
+const char* password = "123456789";        // AP 비밀번호
 
-// ============================================================================
-// AP(Access Point) 정보
-// ============================================================================
-const char* ssid     = "ESP32-Access-Point";
-const char* password = "123456789";
+WiFiServer server(80);           // HTTP 서버(포트80)
 
-// ============================================================================
-// 웹서버 생성
-// ============================================================================
-WiFiServer server(80);
+String header;                   // HTTP 요청 저장
 
-// HTTP 요청 저장 문자열
-String header;
+String output41State = "off";    // GPIO41 상태
+String output42State = "off";    // GPIO42 상태
 
-// ============================================================================
-// GPIO 상태 저장 변수
-// ============================================================================
-String output41State = "off";
-String output42State = "off";
+const int output41 = 41;         // LED1
+const int output42 = 42;         // LED2
 
-// ============================================================================
-// GPIO 번호
-// ============================================================================
-const int output41 = 41;
-const int output42 = 42;
-
-// ============================================================================
-// SETUP
-// ============================================================================
 void setup() {
 
-  // --------------------------------------------------------
-  // 시리얼 모니터 시작
-  // --------------------------------------------------------
-  Serial.begin(115200);
+  Serial.begin(115200);          // 시리얼 시작
 
-  // --------------------------------------------------------
-  // GPIO 출력 모드 설정
-  // --------------------------------------------------------
-  pinMode(output41, OUTPUT);
-  pinMode(output42, OUTPUT);
+  pinMode(output41, OUTPUT);     // GPIO41 출력 설정
+  pinMode(output42, OUTPUT);     // GPIO42 출력 설정
 
-  // --------------------------------------------------------
-  // 초기 상태 OFF
-  // --------------------------------------------------------
-  digitalWrite(output41, LOW);
-  digitalWrite(output42, LOW);
+  digitalWrite(output41, LOW);   // 초기 OFF
+  digitalWrite(output42, LOW);   // 초기 OFF
 
-  // --------------------------------------------------------
-  // AP 생성
-  // --------------------------------------------------------
-  Serial.println("Creating Access Point...");
+  WiFi.softAP(ssid, password);   // AP 생성
 
-  WiFi.softAP(ssid, password);
+  Serial.print("AP IP : ");
+  Serial.println(WiFi.softAPIP()); // AP IP 출력
 
-  // --------------------------------------------------------
-  // AP IP 출력
-  // 기본값 : 192.168.4.1
-  // --------------------------------------------------------
-  IPAddress IP = WiFi.softAPIP();
-
-  Serial.print("AP IP Address : ");
-  Serial.println(IP);
-
-  // --------------------------------------------------------
-  // 웹 서버 시작
-  // --------------------------------------------------------
-  server.begin();
-
-  Serial.println("HTTP Server Started");
+  server.begin();                // 웹서버 시작
 }
 
-// ============================================================================
-// LOOP
-// ============================================================================
 void loop() {
 
-  // --------------------------------------------------------
-  // 새로운 클라이언트 확인
-  // --------------------------------------------------------
-  WiFiClient client = server.available();
+  WiFiClient client = server.available();  // 접속자 확인
 
-  // 접속자가 없으면 종료
-  if (!client) return;
+  if (!client) return;                     // 접속자 없으면 종료
 
-  Serial.println("New Client Connected");
+  String currentLine = "";                 // 현재 수신 라인
 
-  String currentLine = "";
-
-  // --------------------------------------------------------
-  // 클라이언트 연결 유지
-  // --------------------------------------------------------
   while (client.connected()) {
 
     if (client.available()) {
 
-      char c = client.read();
+      char c = client.read();              // 문자 1개 읽기
 
-      Serial.write(c);
+      header += c;                         // HTTP 저장
 
-      header += c;
-
-      // ----------------------------------------------------
-      // 한 줄 끝
-      // ----------------------------------------------------
       if (c == '\n') {
 
-        // --------------------------------------------------
-        // 빈 줄 = HTTP Header 끝
-        // --------------------------------------------------
         if (currentLine.length() == 0) {
 
-          // ==================================================
-          // GPIO41 ON
-          // ==================================================
           if (header.indexOf("GET /41/on") >= 0) {
 
-            Serial.println("GPIO41 ON");
+            output41State = "on";          // 상태 저장
+            digitalWrite(output41, HIGH);  // GPIO41 ON
 
-            output41State = "on";
+          } else if (header.indexOf("GET /41/off") >= 0) {
 
-            digitalWrite(output41, HIGH);
+            output41State = "off";         // 상태 저장
+            digitalWrite(output41, LOW);   // GPIO41 OFF
+
+          } else if (header.indexOf("GET /42/on") >= 0) {
+
+            output42State = "on";          // 상태 저장
+            digitalWrite(output42, HIGH);  // GPIO42 ON
+
+          } else if (header.indexOf("GET /42/off") >= 0) {
+
+            output42State = "off";         // 상태 저장
+            digitalWrite(output42, LOW);   // GPIO42 OFF
           }
 
-          // ==================================================
-          // GPIO41 OFF
-          // ==================================================
-          else if (header.indexOf("GET /41/off") >= 0) {
-
-            Serial.println("GPIO41 OFF");
-
-            output41State = "off";
-
-            digitalWrite(output41, LOW);
-          }
-
-          // ==================================================
-          // GPIO42 ON
-          // ==================================================
-          else if (header.indexOf("GET /42/on") >= 0) {
-
-            Serial.println("GPIO42 ON");
-
-            output42State = "on";
-
-            digitalWrite(output42, HIGH);
-          }
-
-          // ==================================================
-          // GPIO42 OFF
-          // ==================================================
-          else if (header.indexOf("GET /42/off") >= 0) {
-
-            Serial.println("GPIO42 OFF");
-
-            output42State = "off";
-
-            digitalWrite(output42, LOW);
-          }
-
-          // ==================================================
-          // HTTP 응답 시작
-          // ==================================================
-          client.println("HTTP/1.1 200 OK");
+          client.println("HTTP/1.1 200 OK");        // 응답 시작
           client.println("Content-type:text/html");
           client.println("Connection: close");
           client.println();
 
-          // ==================================================
-          // HTML 페이지 생성
-          // ==================================================
-          client.println("<!DOCTYPE html>");
-          client.println("<html>");
+          client.println("<html>");                 // HTML 시작
 
-          client.println("<head>");
+          client.println("<h1>ESP32 Web Server</h1>");
 
-          client.println("<meta name=\"viewport\" content=\"width=device-width, initial-scale=1\">");
+          client.println("<p>GPIO41 : " + output41State + "</p>");
 
-          client.println("<style>");
+          if (output41State == "off")
+            client.println("<a href=\"/41/on\">ON</a>");
+          else
+            client.println("<a href=\"/41/off\">OFF</a>");
 
-          client.println("html {");
-          client.println("font-family: Helvetica;");
-          client.println("text-align:center;");
-          client.println("}");
+          client.println("<p>GPIO42 : " + output42State + "</p>");
 
-          client.println(".button {");
-          client.println("background:#4CAF50;");
-          client.println("color:white;");
-          client.println("padding:16px 40px;");
-          client.println("font-size:30px;");
-          client.println("border:none;");
-          client.println("}");
+          if (output42State == "off")
+            client.println("<a href=\"/42/on\">ON</a>");
+          else
+            client.println("<a href=\"/42/off\">OFF</a>");
 
-          client.println(".button2 {");
-          client.println("background:#555555;");
-          client.println("}");
-
-          client.println("</style>");
-
-          client.println("</head>");
-
-          // ==================================================
-          // BODY 시작
-          // ==================================================
-          client.println("<body>");
-
-          client.println("<h1>ESP32-S3 Web Server</h1>");
-
-          // ==================================================
-          // GPIO41 상태 표시
-          // ==================================================
-          client.println("<h2>GPIO41</h2>");
-
-          client.println("<p>State : " + output41State + "</p>");
-
-          if (output41State == "off") {
-
-            client.println("<a href=\"/41/on\">");
-            client.println("<button class=\"button\">ON</button>");
-            client.println("</a>");
-
-          } else {
-
-            client.println("<a href=\"/41/off\">");
-            client.println("<button class=\"button button2\">OFF</button>");
-            client.println("</a>");
-          }
-
-          // ==================================================
-          // 구분선
-          // ==================================================
-          client.println("<hr>");
-
-          // ==================================================
-          // GPIO42 상태 표시
-          // ==================================================
-          client.println("<h2>GPIO42</h2>");
-
-          client.println("<p>State : " + output42State + "</p>");
-
-          if (output42State == "off") {
-
-            client.println("<a href=\"/42/on\">");
-            client.println("<button class=\"button\">ON</button>");
-            client.println("</a>");
-
-          } else {
-
-            client.println("<a href=\"/42/off\">");
-            client.println("<button class=\"button button2\">OFF</button>");
-            client.println("</a>");
-          }
-
-          client.println("</body>");
-          client.println("</html>");
-
-          // HTTP 종료
-          client.println();
+          client.println("</html>");      // HTML 종료
 
           break;
         }
-        else {
 
-          // 다음 줄 준비
-          currentLine = "";
-        }
-      }
-      else if (c != '\r') {
+        currentLine = "";
 
-        // 현재 줄 저장
-        currentLine += c;
+      } else if (c != '\r') {
+
+        currentLine += c;                 // 문자열 누적
       }
     }
   }
 
-  // --------------------------------------------------------
-  // 요청 데이터 초기화
-  // --------------------------------------------------------
-  header = "";
+  header = "";                            // 요청 초기화
 
-  // --------------------------------------------------------
-  // 클라이언트 연결 종료
-  // --------------------------------------------------------
-  client.stop();
-
-  Serial.println("Client Disconnected");
+  client.stop();                          // 연결 종료
 }
